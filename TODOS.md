@@ -1,4 +1,4 @@
-# TODOS — myModebus
+# TODOS — myModbus
 
 ## TODO 1: 帧检测 CRC 碰撞消歧策略
 **What:** 当时序分帧失败时，滑动窗口扫描可能找到多个 CRC 有效的候选帧边界。需要消歧策略。

@@ -1,5 +1,5 @@
 [package]
-name = "my-modebus"
+name = "my-modbus"
 version = "0.1.0"
 edition = "2021"
 

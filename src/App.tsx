@@ -408,7 +408,7 @@ function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h1>myModebus</h1>
+          <h1>myModbus</h1>
           <span className="version">v0.1.0</span>
         </div>
 

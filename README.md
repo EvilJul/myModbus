@@ -1,4 +1,4 @@
-# myModebus
+# myModbus
 
 Modbus 协议调试工具，支持 RTU 串口和 TCP 两种通信模式。桌面端应用，基于 Tauri 2 + React + Rust 构建。
 
@@ -58,7 +58,7 @@ src-tauri/            # Rust 后端
 macOS 下载后打开可能提示"已损坏"，这是因为应用未经 Apple 签名。终端执行以下命令即可：
 
 ```bash
-xattr -cr /Applications/myModebus.app
+xattr -cr /Applications/myModbus.app
 ```
 
 ## 错误码速查
