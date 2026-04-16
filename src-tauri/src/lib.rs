@@ -783,6 +783,42 @@ fn export_log(content: String, format: String) -> Result<String, String> {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+struct ConnectionConfig {
+    mode: String,
+    port_name: String,
+    baud_rate: u32,
+    data_bits: u8,
+    parity: String,
+    stop_bits: u8,
+    tcp_ip: String,
+    tcp_port: u16,
+}
+
+#[tauri::command]
+fn save_connection_config(app: AppHandle, config: ConnectionConfig) -> Result<(), String> {
+    let dir = app.path().app_data_dir().map_err(|e| format!("[E8010] {}", e))?;
+    std::fs::create_dir_all(&dir).ok();
+    let json = serde_json::to_string_pretty(&config).map_err(|e| format!("[E8011] {}", e))?;
+    std::fs::write(dir.join("connection_config.json"), json).map_err(|e| format!("[E8012] {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_connection_config(app: AppHandle) -> Result<ConnectionConfig, String> {
+    let dir = app.path().app_data_dir().map_err(|e| format!("[E8013] {}", e))?;
+    let path = dir.join("connection_config.json");
+    if !path.exists() {
+        return Ok(ConnectionConfig {
+            mode: "RTU".into(), port_name: String::new(),
+            baud_rate: 9600, data_bits: 8, parity: "None".into(), stop_bits: 1,
+            tcp_ip: "192.168.1.1".into(), tcp_port: 502,
+        });
+    }
+    let json = std::fs::read_to_string(&path).map_err(|e| format!("[E8014] {}", e))?;
+    serde_json::from_str(&json).map_err(|e| format!("[E8015] {}", e))
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 struct RegisterMap {
     address: u16,
     name: String,
@@ -955,15 +991,27 @@ fn modbus_query(
     let mut conn = state.connection.lock().unwrap();
     let connection = conn.as_mut().ok_or("[E2001] 未建立连接，请先连接串口或TCP")?;
 
-    match connection {
+    let result = match connection {
         Connection::Serial(port) => rtu_query(port, &request),
         Connection::Tcp(stream) => {
             let mut tid = state.tcp_transaction_id.lock().unwrap();
             *tid = tid.wrapping_add(1);
             let transaction_id = *tid;
+            drop(tid);
             tcp_query(stream, transaction_id, &request)
         }
+    };
+
+    // 致命连接错误时自动清除死连接，避免后续调用阻塞在坏的流上
+    if let Err(ref e) = result {
+        if e.contains("[E3001]") || e.contains("[E3004]") || e.contains("[E3006]")
+            || e.contains("[E2002]") || e.contains("连接可能已断开")
+        {
+            *conn = None;
+        }
     }
+
+    result
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -976,6 +1024,8 @@ pub fn run() {
             connect_tcp,
             disconnect,
             export_log,
+            save_connection_config,
+            load_connection_config,
             save_register_map,
             load_register_map,
             ai_analyze,
